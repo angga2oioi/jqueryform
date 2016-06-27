@@ -54,6 +54,7 @@
 					option.callback(result);
 				}
 			});
+			$("#frame").contents().find('body').children("form").removeAttr("onsubmit");
 			$("#frame").contents().find('body').children("form").submit();
 			//$("#frame").remove();
 			return;
