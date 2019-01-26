@@ -1,4 +1,3 @@
-
 (function( $ ){
 	$(document).ready(function(){
 		$('body').append('<iframe id="frame" style="display:none;"></iframe>');
@@ -69,6 +68,15 @@
 			var request = new XMLHttpRequest();
 			request.withCredentials = true
 			request.addEventListener('readystatechange', onreadystatechangeHandler, false);
+			request.upload.addEventListener("progress", function (event) {
+				var percent = (event.loaded / event.total) * 100;
+				if(option.progress){
+					option.progress(percent)
+				}
+			});
+			if (option.before){
+				option.before();
+			}
 			request.open($(frm).attr("method"), $(frm).attr("action"),true);
 
 
@@ -79,34 +87,62 @@
 					formData.append(property, option.extradata[property]);
 				}
 			}
-			if (option.before){
-				option.before();
-			}
+			
 			request.send(formData);
 			
 		}
 		function onreadystatechangeHandler(evt) {
-			  var status, text, readyState;
-			  try {
+			var status, text, readyState;
+			try {
 			    readyState = evt.target.readyState;
 			    text = evt.target.responseText;
 			    status = evt.target.status;
-			  }
-			  catch(e) {
+			}
+			catch(e) {
 			    return;
-			  }
-			  if (readyState == 4 && status == '200' && evt.target.responseText) {
-			    if (option.callback && typeof option.callback =="function"){
-					option.callback(evt.target.responseText);
+			}
+			if (readyState == 4) {
+				if( status == '200' && evt.target.responseText){
+					if (option.callback && typeof option.callback =="function"){
+						option.callback(evt.target.responseText);
+					}  
+				}else{
+					var rfrm = $(obj).children("form")[0];
+					var method = $(rfrm).attr("method")
+					var action = $(rfrm).attr("action")
+					option.callback("Error, status code : " + status + ", method :"+method+", action:"+action +", response text:" +evt.target.responseText);
 				}
-			  }
+			}
 		}
-		if(!supportAjaxUploadWithProgress()){
-			useFrameHack();
+		if($(obj).find('form').attr('enctype')=="multipart/form-data"){
+			if(!supportAjaxUploadWithProgress()){
+				useFrameHack();
+				return;
+			}
+			useXHR();
 			return;
 		}
+		if (option.before){
+			option.before();
+		}
+		var url = $(obj).find('form').attr('action');
+		var post_data = $(obj).find('form').serialize();
+		if (option.extradata){
+			post_data += '&' +jQuery.param( option.extradata );
+		}
 		
-		useXHR();
+		$.post(url,post_data)
+		.done(function( data ) {
+			if (option.callback && typeof option.callback =="function"){
+					option.callback(data);
+				}
+		})
+		.fail(function(){
+			if (option.callback && typeof option.callback =="function"){
+				option.callback("Connection Error");
+			}
+		    console.log("Connection Error");    
+        });
 
 	};
 })( jQuery );
